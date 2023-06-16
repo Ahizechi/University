@@ -1,0 +1,32 @@
+clear all
+close all
+load S
+J=S;
+
+J1=reshape(J,[66,20,20,20]);
+J2D=mean(J1(:,5:15,:,:),2);
+
+x=J2D(66,:);
+
+for k=1:16
+    
+    
+for i=1:66
+    
+    x=
+
+% Kent_draw_new_s(x,20);colormap jet
+% return
+% 
+% folder = uigetdir(pwd, 'Select folder');
+% if folder == 0
+% 	return;
+% end
+% 
+% dataFiles = [dir(fullfile(folder,'tri100_0_*.mat'))];
+% numberOfFiles = length(dataFiles);
+% 
+% for i=1:numberOfFiles
+%     for j=1:66
+%         z
+%         

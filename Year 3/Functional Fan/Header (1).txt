@@ -1,0 +1,84 @@
+/*
+ * Structures.h
+ *
+ *  Created on: November 2021
+ *      Author: Ahizechi Nwankwo
+ */
+
+#ifndef STRUCTURES_H_
+#define STRUCTURES_H_
+
+#define Key1 0xE
+#define Key2 0xD
+#define Key3 0xB
+#define Key4 0x7
+
+#define PA 0
+#define OL 1
+#define CL 2
+#define FA 3
+
+#define Disp0 0x40
+#define Disp1 0xF9
+#define Disp2 0x24
+#define Disp3 0x30
+#define Disp4 0x19
+#define Disp5 0x12
+#define Disp6 0x02
+#define Disp7 0xF8
+#define Disp8 0x00
+#define Disp9 0x10
+#define DispA 0x08
+#define DispC 0x46
+#define DispD 0x21
+#define DispE 0x06
+#define DispF 0x0E
+#define DispL 0x47
+#define DispN 0x2B
+#define DispO 0x40
+#define DispP 0x0C
+#define DispR 0x2F
+#define DispS 0x12
+#define DispT 0x07
+#define DispU 0x41
+#define DispBlank 0xFF
+
+#define UP 1
+#define DOWN 0
+
+struct SysState {
+	int SyState;
+	volatile int * HexA;
+	volatile int * HexB;
+	volatile int * Keys;
+	volatile int * Switches;
+	volatile int * LEDs;
+	volatile unsigned int * Counter;
+};
+
+struct FanCont {
+	volatile int * GPioPort;
+	volatile int * GPioD;
+	int SetSpeed;
+	int TruSpeed;
+	int AccRpm;
+	int IncVal;
+};
+
+struct RotaryEnc {
+	volatile int * GPioPort;  // pin on GPIO
+	int PinST;  // pin 17
+	int PinNT;  // pin 19
+	int GC;
+	int PGC;
+	int Dir;
+};
+
+struct PidCont {
+	int KP;
+	int KI;
+	int KD;
+	int OP;
+};
+
+#endif

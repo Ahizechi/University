@@ -1,0 +1,593 @@
+/*
+ * main.c
+ *
+ *	main program for EE30186
+ *
+ *  Created on: November 2021
+ *      Author: Ahizechi Nwankwo
+ */
+
+#include "EE30186.h"
+#include "system.h"
+#include "socal/socal.h"
+#include "structures.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+
+void SystemStart(struct SysState *BoardOn, struct FanCont *FanOn, struct RotaryEnc *RotEnc, struct PidCont *PID)
+{
+	BoardOn->SyState = PA;
+	BoardOn->HexA = (volatile int *)(ALT_LWFPGA_HEXA_BASE);
+	BoardOn->HexB = (volatile int *)(ALT_LWFPGA_HEXB_BASE);
+	BoardOn->Keys = (volatile int *)(ALT_LWFPGA_KEY_BASE);
+	BoardOn->Switches = (volatile int *)(ALT_LWFPGA_SWITCH_BASE);
+	BoardOn->LEDs = (volatile int *)(ALT_LWFPGA_LED_BASE);
+	BoardOn->Counter = (volatile unsigned int *)(ALT_LWFPGA_COUNTER_BASE);
+
+	FanOn->GPioPort = (volatile int *)(ALT_LWFPGA_GPIO_1A_BASE);
+	FanOn->GPioD = (FanOn->GPioPort) + 1;
+	*(FanOn->GPioD) = 8;
+	FanOn->SetSpeed = 0;
+	FanOn->TruSpeed = 0;
+	FanOn->AccRpm = 0;
+	FanOn->IncVal = 1;
+
+	RotEnc->GPioPort = (volatile int *)(ALT_LWFPGA_GPIO_1A_BASE);
+	RotEnc->Dir = 0;
+
+	PID->KP = 10;
+	PID->KI = 3;
+	PID->KD = 5;
+	PID->OP = 0;
+}
+
+
+void CheckState(int *CurrSysState, volatile int **Keys, int *SetSpeed)
+{
+	switch (**Keys)
+	{
+
+	case Key1:
+		*CurrSysState = PA;
+		*SetSpeed = 0;
+		printf("The System is currently Paused.\n");
+		break;
+
+	case Key2:
+		*CurrSysState = CL;
+		printf("The System is currently in Closed Loop Mode.\n");
+		break;
+
+	case Key3:
+		*CurrSysState = OL;
+		printf("The System is currently in Open Loop Mode.\n");
+		break;
+
+	case Key4:
+		*CurrSysState = FA;
+		*SetSpeed = 0;
+		int lower = 1, upper = 15, count = 1;
+
+		srand(time(0));
+
+		for (int i = 0; i < count; i++) {
+			int num = (rand() % (upper-lower + 1)) + lower;
+			if (num == 1)
+			{
+				printf("You can tell if water is hot or cold by listening to the sound it makes! \n");
+			}
+			else if (num == 2)
+			{
+				printf("There are more ways to arrange a deck of cards than there are atoms on Earth! \n");
+			}
+			else if (num == 3)
+			{
+				printf("Mom dolphins sing to their babies while they’re in the womb! \n");
+			}
+			else if (num == 4)
+			{
+				printf("Norway once knighted a penguin! \n");
+			}
+			else if (num == 5)
+			{
+				printf("Scotland’s national animal is a unicorn! \n");
+			}
+			else if (num == 6)
+			{
+				printf("The water we drink today was consumed by dinosaurs first! \n");
+			}
+			else if (num == 7)
+			{
+				printf("Lego is the biggest tire manufacturing company in the world! \n");
+			}
+			else if (num == 8)
+			{
+				printf("Victorians once used leeches to predict the weather! \n");
+			}
+			else if (num == 9)
+			{
+				printf("A bolt of lightning contains enough energy to toast 100,000 slices of bread! \n");
+			}
+			else if (num == 10)
+			{
+				printf("The average person will spend six months of their life waiting for red lights to turn green! \n");
+			}
+			else if (num == 11)
+			{
+				printf("You can hear a blue whale's heartbeat from two miles away! \n");
+			}
+			else if (num == 12)
+			{
+				printf("Water bottle expiration dates are for the bottle, not the water! \n");
+			}
+			else if (num == 13)
+			{
+				printf("One day on Venus is longer than one year on Earth! \n");
+			}
+			else if (num == 14)
+			{
+				printf("The hottest planet in our solar system is 450° C! \n");
+			}
+			else if (num == 15)
+			{
+				printf("Neutron stars can spin 600 times per second! \n");
+			}
+		}
+	}
+}
+
+
+void CheckRotary(struct RotaryEnc *RotEnc)
+{
+	RotEnc->PinST = 0x2 & *(RotEnc->GPioPort) >> 16;  // *(RotEnc->GPioPort) to dereference. 0x2, &, >> 16/19 to mask.
+	RotEnc->PinNT = 0x1 & *(RotEnc->GPioPort) >> 19;
+
+	RotEnc->GC = RotEnc->PinST | RotEnc->PinNT;
+
+	if (RotEnc->PGC == 3)
+	{
+		if (RotEnc->GC == 1)
+		{
+			RotEnc->Dir = 1;
+		}
+		else if (RotEnc->GC == 2)
+		{
+			RotEnc->Dir = -1;
+		}
+		else if (RotEnc->GC == 3)
+		{
+			RotEnc->Dir = 0;
+		}
+	}
+	else if (RotEnc->PGC == 2)
+	{
+		if (RotEnc->GC == 3)
+		{
+			RotEnc->Dir = 1;
+		}
+		else if (RotEnc->GC == 0)
+		{
+			RotEnc->Dir = -1;
+		}
+		else if (RotEnc->GC == 2)
+		{
+			RotEnc->Dir = 0;
+		}
+	}
+	else if (RotEnc->PGC == 1)
+	{
+		if (RotEnc->GC == 0)
+                {
+			RotEnc->Dir = 1;
+		}
+		else if (RotEnc->GC == 3)
+		{
+			RotEnc->Dir = -1;
+		}
+		else if (RotEnc->GC == 1)
+		{
+			RotEnc->Dir = 0;
+		}
+	}
+	else if (RotEnc->PGC == 0)
+                {
+		if (RotEnc->GC == 2)
+                {
+			RotEnc->Dir = 1;
+		}
+		else if (RotEnc->GC == 1)
+                {
+			RotEnc->Dir = -1;
+		}
+		else if (RotEnc->GC == 0)
+                {
+			RotEnc->Dir = 0;
+		}
+	}
+
+	RotEnc->PGC = RotEnc->GC;
+}
+
+
+void IncDif(volatile int Switches, int *IncVal)
+{
+	volatile int IncOn = (Switches >> 9) & 0b1;  // Shift and mask to get SW9
+
+	if (IncOn == UP)
+	{
+		*IncVal = 5;
+	}
+	else
+	{
+		*IncVal = 1;
+	}
+}
+
+
+void IncSpeed(struct FanCont *FanOn, int *Dir)
+{
+	FanOn->SetSpeed = FanOn->SetSpeed + (*Dir * FanOn->IncVal);
+
+	if (FanOn->SetSpeed >= 101)
+	{
+		FanOn->SetSpeed = 100;
+	}
+	else if (FanOn->SetSpeed <= 0)
+	{
+		FanOn->SetSpeed = 1;
+	}
+}
+
+
+void CheckPID(struct FanCont *FanOn, struct PidCont *PID)
+{
+	int DiffError, TotalError = 0, Error;
+	static int LastError;
+
+	FanOn->AccRpm = ((FanOn->SetSpeed)*2800)/100;
+
+	Error = (FanOn->AccRpm) - (FanOn->TruSpeed);
+	DiffError = (Error) - LastError;
+	TotalError = (TotalError + Error);
+
+	PID->OP = ((PID->KP * Error) + (PID->KI * TotalError) + (PID->KD * DiffError))/100;
+
+	LastError = Error;
+}
+
+
+int RPMCalc(int PerF)
+{
+	const int ClockSpeed = 50000000;
+	int FreqF, RpmF;
+
+	FreqF = ClockSpeed/PerF;
+
+	RpmF = FreqF * 30;
+
+	return RpmF;
+}
+
+
+int SpeedCalcA(int SpeedRPM)
+{
+	int i, SpeedT, SpeedAvg;
+	static int RpmV[100];
+
+		 for (i = 0; i < 100; i++)
+		 {
+			 RpmV[i] = RpmV[i+1];
+		 }
+
+		 RpmV[99] = SpeedRPM;
+
+		 SpeedT = 0;
+
+		 for (i = 0; i < 99; i++)
+		 {
+			 SpeedT = SpeedT + RpmV[i];
+		 }
+
+		 SpeedAvg = SpeedT/100;
+
+		 return SpeedAvg;
+}
+
+
+void ReadF(struct SysState *BoardOn, struct FanCont *FanOn)
+{
+	static int ValueF[6];
+	int period, SpeedRPM, currCount, i, SpeedAvg;
+	static int prevCount;
+
+	for (i = 0; i < 5; i++)
+	{
+		ValueF[i] = ValueF[i+1];
+	}
+
+	ValueF[5] = 1 - (0x1 & (*(FanOn->GPioPort) >> 1));
+
+	 if ((ValueF[0] + ValueF[1] + ValueF[2] == 0) && (ValueF[3] + ValueF[4] + ValueF[5] == 3))
+	{
+		currCount = *(BoardOn->Counter);
+
+		period = currCount - prevCount;
+
+		prevCount = currCount;
+
+		SpeedRPM = RPMCalc(period);
+	}
+
+	 if ((SpeedRPM > 0) && (SpeedRPM < 3000))
+	 {
+		 SpeedAvg = SpeedCalcA(SpeedRPM);
+	 }
+
+	 int displayClock = ((*(BoardOn->Counter)/2000000)%8);
+	 if (displayClock == 5 && (SpeedAvg != 1))
+	 {
+		 FanOn->TruSpeed = SpeedAvg;
+	 }
+}
+
+
+void pwmProduce(struct SysState *BoardOn, struct FanCont *FanOn, int *dutyCycle)
+{
+	volatile int count = (*(BoardOn->Counter)/50000)%101;
+
+	if (*dutyCycle <= count)
+	{
+		*(FanOn->GPioPort) = 0x0;
+	}
+	else
+	{
+		*(FanOn->GPioPort) = 0x8;
+	}
+}
+
+
+int SevenSegmentDecoder (int Digit)
+{
+	int SegNum;
+
+	// Choose a value for the segments based on the value of the input. The Hex
+	// display is inverted so a bit value of 1 turns off the digit.
+	switch (Digit)
+	{
+	case 0:
+		SegNum = Disp0; // Hex Value representing the Number 0
+		break;
+	case 1:
+		SegNum = Disp1; // Hex Value representing the Number 1
+		break;
+	case 2:
+		SegNum = Disp2; // Hex Value representing the Number 2
+		break;
+	case 3:
+		SegNum = Disp3; // Hex Value representing the Number 3
+		break;
+	case 4:
+		SegNum = Disp4; // Hex Value representing the Number 4
+		break;
+	case 5:
+		SegNum = Disp5; // Hex Value representing the Number 5
+		break;
+	case 6:
+		SegNum = Disp6; // Hex Value representing the Number 6
+		break;
+	case 7:
+		SegNum = Disp7; // Hex Value representing the Number 7
+		break;
+	case 8:
+		SegNum = Disp8; // Hex Value representing the Number 8
+		break;
+	case 9:
+		SegNum = Disp9; // Hex Value representing the Number 9
+		break;
+
+	default:
+		SegNum = DispBlank; // A Blank Display shows as the Default
+		break;
+	}
+
+	return SegNum;
+}
+
+/*
+ * This function turns a multi-digit number into a multi digit display value. Values
+ * that are out of range (more than 4 decimal digits on this system) will just show
+ * their bottom 4 digits.
+ */
+int MultiDigitDecoder (int Value)
+{
+	int ReturnValue = 0xFFFFFFFF; // Start with a blank Display value to return
+
+	int CurrentDigit = 0; // Keep track of the Digit in the Number we are dealing with
+
+	int SingleDigitDisplay; // Temporary variable to put Values into
+
+	// loop up through the digits in the number. By using a do-while loop we
+	// ensure that the decoder is called at least once. This means that a zero is
+	// displayed as a single zero on the display rather than all blank.
+	do
+	{
+		SingleDigitDisplay = SevenSegmentDecoder(Value%10); // Extract the Bottom Digit
+
+		Value /= 10; // Adjust the Input Value to reflect the extraction of the Bottom Digit
+
+		// Clear the Space that we are going to put the Decoder result into
+		ReturnValue = ReturnValue & ~(0xFF << (CurrentDigit * 8));
+
+		// Shift the single Decoded Digit to the right place in the int and insert it
+		ReturnValue = ReturnValue |  (SingleDigitDisplay << (CurrentDigit * 8));
+
+		// Update the digit postion so that if the value is non-zero we put the
+		// next digit 8 bits further to the left.
+		CurrentDigit++;
+
+	} while (Value > 0);
+
+	return ReturnValue; // Pass back the multi-digit decoded result.
+}
+
+
+void setDisplays(struct SysState *BoardOn, struct FanCont *FanOn)
+{
+	volatile int feedbackRPM = *(BoardOn->Switches) & 0b1;  // Shift and mask (& 0b1) to get SW0
+	volatile int AccRpm = (*(BoardOn->Switches) >> 1) & 0b1;  // Shift and mask (& 0b2) to get SW1
+
+	if (BoardOn->SyState == PA)
+	{
+		// Display "PAUSED" on SSD's
+		*(BoardOn->HexB) = (DispBlank << 8) | (DispP); // "(Blank) P"
+		*(BoardOn->HexA) = (DispA << 24) | (DispU << 16) | (DispS << 8) | (DispE); // "A U S E"
+	}
+	else if (BoardOn->SyState == FA)
+	{
+		// Display "PAUSED" on SSD's
+		*(BoardOn->HexB) = (DispBlank << 8) | (DispF); // "(Blank) P"
+		*(BoardOn->HexA) = (DispA << 24) | (DispC << 16) | (DispT << 8) | (DispS); // "A U S E"
+	}
+	else
+	{
+		if (feedbackRPM == UP)
+		{
+			*(BoardOn->HexA) = MultiDigitDecoder(FanOn->TruSpeed);
+		}
+
+		else if (AccRpm == UP)
+		{
+			*(BoardOn->HexA) = MultiDigitDecoder(FanOn->AccRpm);
+		}
+
+		else
+		{
+			*(BoardOn->HexA) = MultiDigitDecoder(FanOn->SetSpeed);
+		}
+	}
+
+	if (BoardOn->SyState == OL)
+	{
+		// display incrementSize and lower-case 'P' on LHS SSD
+		*(BoardOn->HexB) = (MultiDigitDecoder(FanOn->IncVal) << 8) | (DispP);
+	}
+
+	else if (BoardOn->SyState == CL)
+	{
+		// display incrementSize and lower-case 'C' on LHS SSD
+		*(BoardOn->HexB) = (MultiDigitDecoder(FanOn->IncVal) << 8) | (DispC);
+	}
+}
+
+
+void lightLEDs(int *SetSpeed, volatile int **LEDs)
+{
+    if  (*SetSpeed < 10) // If the Speed is less than 10
+	{
+	    **(LEDs) = 0x0;  // LEDs off
+    }
+    else if ((10 <= *SetSpeed) && (*SetSpeed < 20)) // If the Speed is less than 20 and greater than or equal to 10
+	{
+	    **(LEDs) = 0x200;  // 1 LED lit
+	}
+
+    else if ((20 <= *SetSpeed) && (*SetSpeed < 30)) // If the Speed is less than 30 and greater than or equal to 20
+	{
+	    **(LEDs) = 0x300;  // 2 LEDs lit
+	}
+
+    else if ((30 <= *SetSpeed) && (*SetSpeed < 40)) // If the Speed is less than 40 and greater than or equal to 30
+	{
+        **(LEDs) = 0x380;  // 3 LEDs lit
+	}
+
+    else if ((40 <= *SetSpeed) && (*SetSpeed < 50)) // If the Speed is less than 50 and greater than or equal to 40
+	{
+		**(LEDs) = 0x3C0;  // 4 LEDs lit
+	}
+
+    else if ((50 <= *SetSpeed) && (*SetSpeed < 60)) // If the Speed is less than 60 and greater than or equal to 50
+	{
+	    **(LEDs) = 0x3E0;  // 5 LEDs lit
+	}
+
+    else if ((60 <= *SetSpeed) && (*SetSpeed < 70)) // If the Speed is less than 70 and greater than or equal to 60
+    {
+	    **(LEDs) = 0x3F0;  // 6 LEDs lit
+    }
+
+    else if ((70 <= *SetSpeed) && (*SetSpeed < 80)) // If the Speed is less than 80 and greater than or equal to 70
+	{
+	    **(LEDs) = 0x3F8;  // 7 LEDs lit
+	}
+
+    else if ((80 <= *SetSpeed) && (*SetSpeed < 90)) // If the Speed is less than 90 and greater than or equal to 80
+	{
+	    **(LEDs) = 0x3FC;  // 8 LEDs lit
+	}
+
+    else if ((90 <= *SetSpeed) && (*SetSpeed < 99)) // If the Speed is less than 99 and greater than or equal to 90
+	{
+	    **(LEDs) = 0x3FE;  // 9 LEDs lit
+	}
+
+    else if (*SetSpeed == 100) // If the Speed equals 100
+	{
+	    **(LEDs) = 0x3FF;  // 10 LEDs lit
+	}
+}
+
+
+int main(int argc, char** argv)
+{
+	printf("Start\n");
+	EE30186_Start();
+
+	int pwmDutyCycle = 0;
+
+	struct SysState BoardOn;  // Declare sys struct of type systemState
+	struct RotaryEnc RotEnc;  // Declare rotEnc struct of type rotaryEncoder
+	struct FanCont FanOn;  // Declare fan struct of type fanInfo
+	struct PidCont PID; // Declare pid struct of type PID
+
+	SystemStart(&BoardOn, &FanOn, &RotEnc, &PID);
+
+	while (1)
+	{
+		CheckState(&(BoardOn.SyState), &(BoardOn.Keys), &(FanOn.SetSpeed));
+
+		CheckRotary(&RotEnc);
+
+		IncDif(*(BoardOn.Switches), &(FanOn.IncVal));
+
+		IncSpeed(&FanOn, &(RotEnc.Dir));
+
+		ReadF(&BoardOn, &FanOn);
+
+		if (BoardOn.SyState == CL)
+		{
+			CheckPID(&FanOn, &PID);
+			pwmDutyCycle = PID.OP + FanOn.SetSpeed;
+		}
+
+		else
+		{
+			pwmDutyCycle = FanOn.SetSpeed;
+		}
+
+		pwmProduce(&BoardOn, &FanOn, &pwmDutyCycle);
+
+		setDisplays(&BoardOn, &FanOn);
+
+		lightLEDs(&(FanOn.SetSpeed), &(BoardOn.LEDs));
+
+	}
+    EE30186_End();
+
+    return 0;
+
+}
