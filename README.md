@@ -2,8 +2,6 @@ This repository serves as a comprehensive portfolio of projects undertaken durin
 
 Year 3 Projects
 
-Dual-Language Calculator: A versatile calculator application developed in both Python and ROSS, designed to perform a wide range of mathematical operations with user-friendly interfaces.
-
 C++ Functional Fan: A project demonstrating the use of C++ to code a functional fan, showcasing the application of object-oriented programming principles and hardware interaction.
 
 Year 4 Projects
