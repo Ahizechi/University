@@ -1,7 +1,0 @@
-Scripts are located:
-
-rosdata -> catkin_ws -> src -> beginner_tutorials -> scripts (Ignore Talker file)
-
-Service File is located:
-
-rosdata -> catkin_ws -> src -> beginner_tutorials -> srv

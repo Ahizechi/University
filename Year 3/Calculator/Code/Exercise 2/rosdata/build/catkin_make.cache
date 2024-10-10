@@ -1,2 +1,0 @@
-
--DPYTHON_EXECUTABLE=/usr/bin/python3 -DCATKIN_DEVEL_PREFIX=/rosdata/devel -DCMAKE_INSTALL_PREFIX=/rosdata/install -G Unix Makefiles
